@@ -23,8 +23,8 @@ Consumer::Consumer(std::string const& name, RTT::ExecutionEngine* engine, TaskCo
 
 void Consumer::updateHook()
 {
-    NotOrogenCompatible::Point2D point;
-    if (_point.read(point))
+    const NotOrogenCompatible::Point2D& point = _point.data();
+    if (_point.status() != RTT::NoData)
         *io << "[" << point.x() << " " << point.y() << "] " << flush;
     else
         *io << "[U] " << flush;

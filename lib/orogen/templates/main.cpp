@@ -1,8 +1,12 @@
 #include <rtt/os/main.h>
+#include <rtt/os/Thread.hpp>
 
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <memory>
+#include <chrono>
+#include <csignal>
+#include <thread>
 #include <rtt/internal/GlobalEngine.hpp>
 #include <rtt/TaskContext.hpp>
 
@@ -65,6 +69,12 @@
 #include <rtt/base/ActivityInterface.hpp>
 
 bool exiting;
+<% if !deployer.corba_enabled? && !deployer.browse && task_activities.any?(&:start?) %>
+namespace {
+volatile std::sig_atomic_t local_exit = 0;
+void stop_local_deployment(int) { local_exit = 1; }
+}
+<% end %>
 <% deployer.each_needed_global_cpp_initializer do |init| %>
 <%= ERB.new(init.global_scope).result(binding) %>
 <% end %>
@@ -85,6 +95,7 @@ class Deinitializer
     friend Deinitializer& operator << (Deinitializer&, RTT::base::ActivityInterface&);
 
     std::vector<RTT::base::ActivityInterface*> m_activities;
+    std::vector<RTT::TaskContext*> m_tasks;
 
 <% if deployer.corba_enabled? %>
 #ifdef OROGEN_SERVICE_DISCOVERY_ACTIVATED
@@ -96,8 +107,13 @@ class Deinitializer
 
 
 public:
+    void addTask(RTT::TaskContext& task) { m_tasks.push_back(&task); }
     ~Deinitializer()
     {
+        // Finish task lifecycle transitions before stopping their activities.
+        for (auto task = m_tasks.rbegin(); task != m_tasks.rend(); ++task) {
+            (*task)->stop();
+        }
         for (std::vector<RTT::base::ActivityInterface*>::const_iterator it = m_activities.begin();
                 it != m_activities.end(); ++it)
         {
@@ -374,6 +390,9 @@ RTT::internal::GlobalEngine::Instance(ORO_SCHED_OTHER, RTT::os::LowestPriority);
 
 
    Deinitializer deinit;
+<% activity_ordered_tasks.each do |task| %>
+    deinit.addTask(*task_<%= task.name %>);
+<% end %>
 
 <% if deployer.corba_enabled? %>
 #ifdef OROGEN_SERVICE_DISCOVERY_ACTIVATED
@@ -412,6 +431,16 @@ RTT::internal::GlobalEngine::Instance(ORO_SCHED_OTHER, RTT::os::LowestPriority);
         }
         <% end %>
     <% end %>
+
+    // Prepare every component's cyclic I/O plan before any activity starts.
+<% deployer.each_task do |task| %>
+    if (!task_<%= task.name %>->finalizeConnections())
+    {
+        RTT::Logger::log().logf(RTT::Logger::Error, "orogen",
+                                "cannot finalize connections for <%= task.name %>");
+        return -1;
+    }
+<% end %>
 
     // Start some activities
 <% task_activities.each do |task| %>
@@ -526,6 +555,13 @@ RTT::internal::GlobalEngine::Instance(ORO_SCHED_OTHER, RTT::os::LowestPriority);
 <% elsif deployer.browse %>
     OCL::TaskBrowser browser(task_<%= deployer.browse.name %>.get());
     browser.loop();
+<% elsif task_activities.any?(&:start?) %>
+    // Native deployments keep their started cyclic components alive.
+    std::signal(SIGINT, stop_local_deployment);
+    std::signal(SIGTERM, stop_local_deployment);
+    while (!local_exit) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
 <% end %>
 
 <% deployer.each_needed_global_cpp_initializer do |init| %>

@@ -1,0 +1,11 @@
+name 'cyclic_images'
+
+task_context 'Task' do
+    input_port 'input', '/int32_t'
+    output_port 'output', '/int32_t'
+    runtime_states 'ACTIVE'
+end
+
+deployment 'cyclic_images_deployment' do
+    task('images', 'Task').sequential
+end

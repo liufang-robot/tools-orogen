@@ -145,17 +145,6 @@ module OroGen
                     super
 
                     setup = []
-                    if keep_last_written_value == :initial
-                        setup << "_#{name}.keepLastWrittenValue(false);"
-                        setup << "_#{name}.keepNextWrittenValue(true);"
-                    elsif keep_last_written_value
-                        setup << "_#{name}.keepLastWrittenValue(true);"
-                        setup << "_#{name}.keepNextWrittenValue(false);"
-                    else
-                        setup << "_#{name}.keepLastWrittenValue(false);"
-                        setup << "_#{name}.keepNextWrittenValue(false);"
-                    end
-
                     type.metadata.get("orogen:cxx_port_codegen:constructor").each do |code|
                         setup << format(code, name)
                     end

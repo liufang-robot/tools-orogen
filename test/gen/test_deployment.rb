@@ -29,7 +29,30 @@ class TC_GenerationDeployment < Minitest::Test
         # Check the resulting file
         in_prefix do
             system(File.join("bin", "data"))
-            assert_equal "U 2 4 6 8 10 ", File.read("data_trigger.txt")
+            assert_equal "U 1 2 3 4 5 6 7 8 9 10 ", File.read("data_trigger.txt")
+
+            # A native deployment must also finish task lifecycles before
+            # destroying ports when termination comes from its supervisor.
+            File.unlink("data_trigger.txt")
+            pid = Process.spawn(File.join("bin", "data"))
+            begin
+                deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 3
+                until File.exist?("data_trigger.txt") &&
+                      File.read("data_trigger.txt").include?("2 ")
+                    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC),
+                                    :<, deadline, "native deployment did not execute"
+                    sleep 0.01
+                end
+                Process.kill("TERM", pid)
+                _, status = Process.waitpid2(pid)
+                pid = nil
+                assert status.success?, "native cyclic deployment did not stop cleanly"
+            ensure
+                if pid
+                    Process.kill("KILL", pid)
+                    Process.waitpid(pid)
+                end
+            end
         end
     end
 
