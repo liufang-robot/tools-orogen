@@ -87,7 +87,7 @@ ENDIF ( DOXYGEN_FOUND )
 #
 
 # First, we need the Orocos::RTT, and optionally the CORBA part
-orogen_pkg_check_modules(OrocosRTT REQUIRED "orocos-rtt-${OROCOS_TARGET}>=2.1.0")
+orogen_pkg_check_modules(OrocosRTT REQUIRED "orocos-rtt-${OROCOS_TARGET}>=3.0.0")
 
 # Add generic include directories
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR})

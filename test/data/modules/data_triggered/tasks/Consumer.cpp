@@ -20,15 +20,9 @@ bool Consumer::startHook() {
 
 void Consumer::updateHook()
 {
-    double value;
-    bool got_data = false;
-    while (_input.read(value) == RTT::NewData)
-    {
-        got_data = true;
-        *outfile << value << " " << flush;
-    }
-
-    if (!got_data)
+    if (_input.status() == RTT::NewData)
+        *outfile << _input.data() << " " << flush;
+    else
         *outfile << "U " << flush;
 }
 

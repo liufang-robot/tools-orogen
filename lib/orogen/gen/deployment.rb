@@ -266,7 +266,7 @@ module OroGen
                 def generate
                     deployer = self
 
-                    if !corba_enabled? && !@browse
+                    if !corba_enabled? && !@browse && !task_activities.any?(&:start?)
                         OroGen.warn "the deployment #{name} will do nothing. Either generate with --transports=corba or use the 'browse' statement"
                     end
 

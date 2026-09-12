@@ -25,12 +25,12 @@ void Producer::updateHook()
     static int idx = 0;
     ++idx;
 
-    if (idx == 11) // finish on a non-triggering write to have a more deterministic test
+    if (idx == 11) // finish after ten completed cyclic publications
         exit(0);
 
-    if (idx % 2 == 0)
-        _output.write(idx);
-    else _output2.write(idx);
+    _output.data() = idx;
+    _output2.data() = idx;
+
 }
 
 // void Producer::errorHook() {}

@@ -24,7 +24,7 @@ void Producer::updateHook()
     NotOrogenCompatible::Point2D point;
     point.x() = ++i;
     point.y() = ++i;
-    _point.write(point);
+    _point.data() = point;
     if (i == 20)
         exit(0);
 }

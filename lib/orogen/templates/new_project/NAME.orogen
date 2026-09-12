@@ -33,15 +33,15 @@ task_context "Task" do
     # An input port, i.e. an object from which the component gets data from
     # other components' outputs
     #
-    # Data can be retrieved using _input.read(value), which returns true if data
-    # was available, and false otherwise. _input.connected() returns if this
-    # input is connected to an output or not.
+    # Read the stable input image with _input.data(). The runtime refreshes it
+    # before updateHook(); _input.status() reports freshness without consuming it.
     input_port "input", "/std/string"
 
     # An output port, i.e. an object to which the component pushes data so that
     # it is transmitted to other components' inputs
     #
-    # Data can be written using _output.write(value). _output.connected() returns
+    # Assign _output.data() in updateHook(); the runtime publishes after a successful
+    # cycle. _output.connected() returns
     # if this output is connected to an input or not.
     output_port "output", "int"
 

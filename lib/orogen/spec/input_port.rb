@@ -40,11 +40,10 @@ module OroGen
                 task.port_driven(name)
             end
 
-            # True if connections to this port must use a buffered.
-            # In general, it means that the task's code check the return value
-            # of read(), as in
+            # Requires a bounded transport buffer. Cyclic input acquisition
+            # consumes at most one sample per cycle; freshness is observed as
             #
-            #   if (_input.read(value))
+            #   if (_input.status() == RTT::NewData)
             #   {
             #       // data is available, do something
             #   }

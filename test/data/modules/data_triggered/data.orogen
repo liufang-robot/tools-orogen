@@ -15,7 +15,7 @@ task_context 'Consumer' do
     port_driven 'input'
 end
 
-# This producer component writes alternatively on both its ports, and exits
+# This producer component updates both output images every cycle, and exits
 # using exit(0) after 10 cycles. It is used in the following static deployment
 # to test the port-driven behaviour.
 task_context 'Producer' do
@@ -24,7 +24,6 @@ task_context 'Producer' do
 end
 
 deployment "data" do
-    enable_corba
     consumer = task("consumer", 'Consumer').
         triggered.
         start
@@ -32,7 +31,7 @@ deployment "data" do
         periodic(0.1).
         start
 
-    connect producer.output,  consumer.input, :type => :buffer, :size => 2
-    connect producer.output2, consumer.input2, :type => :buffer, :size => 2
+    connect producer.output,  consumer.input, :type => :data
+    connect producer.output2, consumer.input2, :type => :data
 end
 
