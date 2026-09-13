@@ -1,6 +1,7 @@
 #include "Consumer.hpp"
 #include <iostream>
 #include <fstream>
+#include <cstdlib>
 
 using namespace std;
 using namespace data;
@@ -20,10 +21,11 @@ bool Consumer::startHook() {
 
 void Consumer::updateHook()
 {
-    if (_input.status() == RTT::NewData)
+    if (_input.status() == RTT::NewData && _input.data() > 0) {
         *outfile << _input.data() << " " << flush;
-    else
-        *outfile << "U " << flush;
+        if (_input.data() == 10 && !getenv("OROGEN_TEST_WAIT_FOR_SIGNAL"))
+            exit(0);
+    }
 }
 
 // void Consumer::errorHook() {}
@@ -32,4 +34,3 @@ void Consumer::stopHook()
     delete outfile;
 }
 // void Consumer::cleanupHook() {}
-

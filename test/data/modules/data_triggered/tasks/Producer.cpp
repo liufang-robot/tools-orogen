@@ -23,10 +23,8 @@ Producer::Producer(std::string const& name, TaskCore::TaskState initial_state)
 void Producer::updateHook()
 {
     static int idx = 0;
-    ++idx;
-
-    if (idx == 11) // finish after ten completed cyclic publications
-        exit(0);
+    if (idx < 10)
+        ++idx;
 
     _output.data() = idx;
     _output2.data() = idx;
@@ -36,4 +34,3 @@ void Producer::updateHook()
 // void Producer::errorHook() {}
 // void Producer::stopHook() {}
 // void Producer::cleanupHook() {}
-

@@ -1,4 +1,5 @@
 #include "Consumer.hpp"
+#include <cstdlib>
 
 using namespace cross_deployment;
 using namespace std;
@@ -24,13 +25,13 @@ Consumer::Consumer(std::string const& name, RTT::ExecutionEngine* engine, TaskCo
 void Consumer::updateHook()
 {
     const NotOrogenCompatible::Point2D& point = _point.data();
-    if (_point.status() != RTT::NoData)
+    if (_point.status() == RTT::NewData && point.x() > 0) {
         *io << "[" << point.x() << " " << point.y() << "] " << flush;
-    else
-        *io << "[U] " << flush;
+        if (point.y() == 20)
+            exit(0);
+    }
 }
 
 // void Consumer::errorHook() {}
 // void Consumer::stopHook() {}
 // void Consumer::cleanupHook() {}
-

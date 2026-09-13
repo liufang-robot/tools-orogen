@@ -106,15 +106,8 @@ module OroGen
                 end
 
                 def register_for_generation
-                    add =
-                        if task.find_event_port(name)
-                            "addEventPort"
-                        else
-                            "addPort"
-                        end
-
                     constructor = []
-                    constructor << "ports()->#{add}(_#{name})"
+                    constructor << "ports()->addPort(_#{name})"
                     if doc
                         constructor << "  .doc(#{Generation.multiline_string_to_cxx(doc)})"
                     end

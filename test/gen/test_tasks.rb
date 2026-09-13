@@ -185,12 +185,13 @@ class TC_GenerationTasks < Minitest::Test
         compile_wc(project)
     end
 
-    def test_task_ports_driven
-        task.input_port "r", "int"
-        task.port_driven "r"
-
-        create_wc("tasks/port_driven")
-        compile_wc(project)
+    def test_generation_rejects_port_driven_dsl
+        assert_raises(NoMethodError) do
+            project.task_context "PortDriven" do
+                input_port "input", "int"
+                port_driven "input"
+            end
+        end
     end
 
     def test_it_can_generate_tasks_with_a_default_activity

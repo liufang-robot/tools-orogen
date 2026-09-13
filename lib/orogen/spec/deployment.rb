@@ -165,7 +165,7 @@ module OroGen
             end
 
             # Returns the minimal latency between the time the task gets
-            # triggered (for instance because of data on an input event port),
+            # triggered by an external scheduler,
             # and the time updateHook() is actually called, based on its
             # scheduler and priority. All tasks will return a value (even
             # non-periodic ones).
@@ -184,8 +184,8 @@ module OroGen
             end
 
             # Returns the expected (average) latency between the time the task
-            # gets triggered (for instance because of data on an input event
-            # port), and the time updateHook() is actually called, based on its
+            # gets triggered by an external scheduler, and the time updateHook()
+            # is actually called, based on its
             # scheduler and priority. All tasks will return a value (even
             # non-periodic ones).
             #
@@ -352,12 +352,6 @@ module OroGen
             # triggering methods otherwise.
             attr_reader :period
 
-            # Returns true if +port+ is a trigger for this task
-            def trigger_port?(port)
-                port.trigger_port? &&
-                    activity_type.name != "Periodic"
-            end
-
             # Declare that this deployed task's is periodic
             #
             # Sets this task as being periodic. Call {#period} to return the
@@ -438,9 +432,8 @@ module OroGen
             end
 
             # Marks this task as being "sequential". Sequential tasks are
-            # thread-less, and are triggered by the task context that is calling
-            # step() on them, or -- in the case of port-driven tasks -- by the
-            # task context that wrote on their read ports.
+            # thread-less and execute when an external scheduler calls trigger()
+            # on their activity. Port data never triggers execution.
             def sequential
                 activity_type "Sequential", "RTT::extras::SequentialActivity",
                               "rtt/extras/SequentialActivity.hpp"

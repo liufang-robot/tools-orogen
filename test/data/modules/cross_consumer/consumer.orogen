@@ -12,6 +12,5 @@ using_typekit "opaque"
 task_context "Consumer" do
     input_port "point", "NotOrogenCompatible/Point2D"
 
-    port_driven "point"
+    periodic 0.01
 end
-

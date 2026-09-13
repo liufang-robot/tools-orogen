@@ -16,6 +16,13 @@ module OroGen
                 refute @port.input?
             end
 
+            it "rejects input-triggered publication declarations" do
+                @task.input_port "input", "/double"
+                assert_raises(NoMethodError) { @port.triggered_on "input" }
+                assert @port.triggered_on_update?
+                assert_same @port, @port.triggered_once_per_update
+            end
+
             it "has no optional retention policy for cyclic outputs" do
                 refute_respond_to @port, :keep_last_written_value
                 refute_respond_to @port, :init_policy

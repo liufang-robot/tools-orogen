@@ -16,6 +16,15 @@ module OroGen
                 assert @port.input?
             end
 
+            it "rejects task triggering on static and dynamic input ports" do
+                static = @task.input_port "static", "/double"
+                dynamic = @task.dynamic_input_port(/dynamic.*/, "/double")
+                [static, dynamic].each do |port|
+                    assert_raises(NoMethodError) { port.task_trigger }
+                    assert_raises(NoMethodError) { port.trigger_port = true }
+                end
+            end
+
             it "requires latest-value data connections without a buffered DSL helper" do
                 assert_equal :data, @port.required_connection_type
                 refute_respond_to @port, :needs_buffered_connection

@@ -3,6 +3,26 @@
 require "orogen/gen/test"
 
 class TC_GenerationDeployment < Minitest::Test
+    def run_deployment_until_exit(path)
+        pid = Process.spawn(path)
+        begin
+            deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 10
+            until (result = Process.waitpid2(pid, Process::WNOHANG))
+                if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+                    flunk "periodic deployment did not finish"
+                end
+                sleep 0.01
+            end
+            pid = nil
+            assert result.last.success?, "periodic deployment failed"
+        ensure
+            if pid
+                Process.kill("KILL", pid)
+                Process.waitpid(pid)
+            end
+        end
+    end
+
     def test_all_activity_types
         project = Project.new
         project.name "test_all_activity_types"
@@ -23,22 +43,26 @@ class TC_GenerationDeployment < Minitest::Test
         end
     end
 
-    def test_data_driven_deployment(*transports)
+    def test_periodic_data_deployment(*transports)
         build_test_project "modules/data_triggered", transports
 
         # Check the resulting file
         in_prefix do
-            system(File.join("bin", "data"))
-            assert_equal "U 1 2 3 4 5 6 7 8 9 10 ", File.read("data_trigger.txt")
+            run_deployment_until_exit(File.join("bin", "data"))
+            samples = File.read("data_trigger.txt").split.map { |s| Integer(s) }
+            assert_equal 10, samples.last
+            assert_equal samples.sort.uniq, samples
+            assert samples.all? { |sample| (1..10).cover?(sample) }
 
             # A native deployment must also finish task lifecycles before
             # destroying ports when termination comes from its supervisor.
             File.unlink("data_trigger.txt")
-            pid = Process.spawn(File.join("bin", "data"))
+            pid = Process.spawn({ "OROGEN_TEST_WAIT_FOR_SIGNAL" => "1" },
+                                File.join("bin", "data"))
             begin
                 deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 3
                 until File.exist?("data_trigger.txt") &&
-                      File.read("data_trigger.txt").include?("2 ")
+                      !File.read("data_trigger.txt").empty?
                     assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC),
                                     :<, deadline, "native deployment did not execute"
                     sleep 0.01
@@ -107,10 +131,12 @@ class TC_GenerationDeployment < Minitest::Test
         install
 
         in_prefix do
-            system(File.join("bin", "cross_deployment"))
-            expected = "[U] [1 2] [3 4] [5 6] [7 8] [9 10] [11 12] [13 14] [15 16] "
-            assert_equal expected,
-                         File.read("cross_dependencies.txt")[0, expected.length]
+            run_deployment_until_exit(File.join("bin", "cross_deployment"))
+            samples = File.read("cross_dependencies.txt").scan(/\[(\d+) (\d+)\]/)
+                .map { |x, y| [Integer(x), Integer(y)] }
+            assert_equal [19, 20], samples.last
+            assert_equal samples.sort.uniq, samples
+            assert samples.all? { |x, y| x.odd? && y == x + 1 && (1..20).cover?(y) }
         end
     end
 
