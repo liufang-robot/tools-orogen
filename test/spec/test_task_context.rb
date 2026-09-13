@@ -127,18 +127,20 @@ describe OroGen::Spec::TaskContext do
         end
     end
 
-    describe "#port_driven" do
-        it "can handle a port by name" do
-            p = task.input_port "r", "int"
-            task.port_driven "r"
-            assert_equal [p], task.all_event_ports
+    describe "explicit cyclic scheduling" do
+        it "rejects port-driven declarations instead of silently changing scheduling" do
+            task.input_port "r", "int"
+            assert_raises(NoMethodError) { task.port_driven "r" }
+            assert_raises(NoMethodError) { task.port_driven }
+            assert_raises(NoMethodError) { task.inputtrigger "r" }
         end
-        it "raises ArgumentError if given a non-existing port" do
-            assert_raises(ArgumentError) { task.port_driven "r" }
-        end
-        it "raises ArgumentError if given an output port" do
-            task.output_port "w", "int"
-            assert_raises(ArgumentError) { task.port_driven "w" }
+
+        it "keeps periodic and externally triggered activity choices with input ports" do
+            task.input_port "r", "int"
+            task.periodic 0.01
+            assert_equal [:periodic, [0.01], {}], task.default_activity
+            task.default_activity :triggered
+            assert_equal [:triggered, [], {}], task.default_activity
         end
     end
 

@@ -39,17 +39,15 @@ describe OroGen::Spec::Port do
     end
 
     describe "static or dynamic connection" do
-        it "is dynamic by default" do
-            assert !port.static?
+        it "requires stopped topology by default" do
+            assert port.static?
         end
         it "becomes static if #static is called" do
             port.static
             assert port.static?
         end
-        it "becomes dynamic again if #dynamic is called" do
-            port.static
-            port.dynamic
-            assert !port.static?
+        it "cannot opt into running topology changes" do
+            refute_respond_to port, :dynamic
         end
     end
 end

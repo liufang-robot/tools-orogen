@@ -22,14 +22,13 @@ void Producer::updateHook()
 {
     static int i = 0;
     NotOrogenCompatible::Point2D point;
-    point.x() = ++i;
-    point.y() = ++i;
-    _point.write(point);
-    if (i == 20)
-        exit(0);
+    if (i < 20)
+        i += 2;
+    point.x() = i - 1;
+    point.y() = i;
+    _point.data() = point;
 }
 
 // void Producer::errorHook() {}
 // void Producer::stopHook() {}
 // void Producer::cleanupHook() {}
-

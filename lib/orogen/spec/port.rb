@@ -48,47 +48,14 @@ module OroGen
                 ]
             end
 
-            # Stores the policy for keeping last values. It can be nil, :initial or true
-            #
-            # The default is :initial. It reasonably ensures that connections
-            # containing variable-sized vectors such as std::vector are properly
-            # initialized, avoiding memory allocations. Turn it off for ports
-            # on which huge data samples are going to be sent and/or ports for
-            # which realtime communication is not required
-            dsl_attribute :keep_last_written_value do |value|
-                unless [nil, true, false, :initial].include?(value)
-                    raise ArgumentError,
-                          "keep_last_written_value can only be one of true, false/nil and :initial. Got #{value}"
-                end
-
-                value
-            end
-
-            # True if the task context supports only static connections on this
-            # port, and false otherwise
-            #
-            # See #static for more details.
+            # All cyclic connections are prepared while their owners are stopped.
             def static?
-                !!@static
+                true
             end
 
-            # Declares that this port can be connected/disconnected only when
-            # the task context is in a non-running state.
-            #
-            # The default is that the port is dynamic, i.e. can be
-            # connected/disconnected regardless of the task context's state.
-            #
-            # See also #dynamic
+            # Explicit declaration of the mandatory stopped-topology policy.
             def static
-                @static = true
-            end
-
-            # Declares that this port can be connected/disconnected while the
-            # task context is running. It is the opposite of #static.
-            #
-            # This is the default
-            def dynamic
-                @static = false
+                self
             end
 
             def pretty_print(pp)
@@ -124,7 +91,6 @@ module OroGen
 
                 @doc = nil
                 @max_sizes = {}
-                keep_last_written_value :initial
             end
 
             # call-seq:

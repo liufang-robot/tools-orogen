@@ -437,7 +437,6 @@ module OroGen
                 @output_ports = {}
                 @input_ports  = {}
                 @dynamic_ports = []
-                @event_ports = {}
                 @initial_state = "Stopped"
                 @default_extensions = []
                 @fixed_initial_state = false
@@ -513,11 +512,6 @@ module OroGen
                 pp.breakable
                 pp.text "subclass of #{superclass.name} (the superclass elements are displayed below)"
                 pp.breakable
-                triggers = all_event_ports
-                unless triggers.empty?
-                    pp.text "Triggered on input: #{triggers.map(&:name).join(', ')}"
-                    pp.breakable
-                end
                 if needs_configuration?
                     pp.text "Needs configuration"
                 else
@@ -1344,42 +1338,6 @@ module OroGen
             # created at runtime.
             def has_dynamic_output_port?(name, type = nil)
                 !find_dynamic_output_ports(name, type).empty?
-            end
-
-            # A set of ports that will trigger this task when they get updated.
-            enumerate_inherited_map "event_port", "event_ports"
-
-            # Declares that this task context is designed to be woken up when
-            # new data is available on one of the given ports (or all already
-            # defined ports if no names are given).
-            #
-            # @param [Float,nil] timeout in seconds. If non-nil, the task will be
-            #   called after this many seconds have passed without being triggered
-            def port_driven(*names, timeout: nil)
-                default_activity "triggered", timeout: timeout
-                names = names.map(&:to_s)
-                relevant_ports =
-                    if names.empty? then all_input_ports
-                    else
-                        names.map do |n|
-                            obj = find_input_port(n)
-                            unless obj
-                                unless has_output_port?(n)
-                                    raise ArgumentError, "#{n} is not a port of #{name}"
-                                end
-
-                                raise ArgumentError,
-                                      "#{n} is an output port of #{name}, only input ports can be used in #port_driven"
-
-                            end
-                            obj
-                        end
-                    end
-
-                relevant_ports.each do |port|
-                    port.trigger_port = true
-                    @event_ports[port.name] = port
-                end
             end
 
             # Declares that this task context is designed to be woken up when

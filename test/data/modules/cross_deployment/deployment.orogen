@@ -18,17 +18,16 @@ task_context "Consumer" do
 end
 
 # Static deployment for testing. The Producer component will generate sequential
-# points, that are then written in a file by the Consumer component. After 10
-# points, the producer component aborts the execution using exit(0).
+# points, that are then written in a file by the Consumer component. The
+# consumer exits after observing the final point.
 deployment "cross_deployment" do
-    enable_corba
     producer = task("producer", "cross_producer::Producer").
         periodic(0.1).
         start
     consumer = task("consumer", "Consumer").
+        periodic(0.01).
         start
 
     connect(producer.point, consumer.point)
 
 end
-

@@ -42,10 +42,6 @@ module OroGen
         # runtime. They are added by TaskContext#dynamic_input_port.
         class DynamicInputPort < InputPort
             include DynamicPort
-
-            def task_trigger # :nodoc:
-                @trigger_port = true
-            end
         end
     end
 end

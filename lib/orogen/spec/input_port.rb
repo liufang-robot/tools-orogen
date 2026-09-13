@@ -11,46 +11,8 @@ module OroGen
                 @required_connection_type = :data
             end
 
-            attr_predicate :trigger_port?, true
-
             def input?
                 true
-            end
-
-            # If called, this port will be registered on the task as a trigger
-            # port,
-            #
-            # i.e. the following
-            #
-            #   task_context "Name" do
-            #     input_port("port", "int").
-            #       trigger_port
-            #   end
-            #
-            # is equivalent to
-            #
-            #   task_context "Name" do
-            #     input_port("port", "int")
-            #     port_driven 'port'
-            #   end
-            #
-            # The difference with port_driven is that it works on dynamic ports
-            # as well
-            def task_trigger
-                task.port_driven(name)
-            end
-
-            # True if connections to this port must use a buffered.
-            # In general, it means that the task's code check the return value
-            # of read(), as in
-            #
-            #   if (_input.read(value))
-            #   {
-            #       // data is available, do something
-            #   }
-            def needs_buffered_connection
-                @required_connection_type = :buffer
-                self
             end
 
             # True if connections to this port must use a data policy.
@@ -71,10 +33,9 @@ module OroGen
 
             # Declares that the task context requires a non-lossy policy
             #
-            # This is different from #requires_buffered_connection as a data
-            # policy could be used if the period of the connection's source is
-            # much longer than the period of the connection's end (for
-            # instance).
+            # Latest-value connections may coalesce samples. Meeting this
+            # requirement therefore depends on deployment timing, for example
+            # running the consumer more often than the producer publishes.
             def needs_reliable_connection
                 @needs_reliable_connection = true
                 self

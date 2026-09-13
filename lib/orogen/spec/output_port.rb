@@ -10,9 +10,7 @@ module OroGen
                 @period = 1
                 @burst_size = 0
                 @burst_period = 0
-                @port_triggers = Set.new
                 @triggered_on_update = nil
-                @init_policy = nil
             end
 
             attr_reader :burst_size, :burst_period
@@ -61,97 +59,37 @@ module OroGen
                 self
             end
 
-            # The set of input ports that will cause a write on this output
-            def port_triggers
-                return [] if @triggered_once_per_update
-
-                @port_triggers
-            end
-
-            # call-seq:
-            #   triggered_on input_port_name, input_port_name, ...
-            #
-            # Declares that this port will be written whenever a sample is
-            # received on the given input ports. The default is to consider that
-            # the port is written whenever updateHook() is called.
-            #
-            # You may want to call #triggered_on_update if the port will be
-            # written for each call to updateHook too.
-            def triggered_on(*input_ports)
-                input_ports = input_ports.to_set.map do |name|
-                    unless (p = task.find_input_port(name))
-                        raise ArgumentError, "#{name} is not an input port of #{self}"
-                    end
-
-                    p
-                end
-
-                @port_triggers |= input_ports
-                self
-            end
-
             # Used to write the triggered_on_update flag directly. This should
             # not be used in normal situations
             attr_writer :triggered_on_update
 
             # Declares that this port will be written for each call of the
-            # updateHook(). It is the default if #triggered_on has not been
-            # called.
+            # updateHook(). Automatic cyclic publication uses this timing.
             def triggered_on_update
                 @triggered_on_update = true
                 self
             end
 
             # Declares that at most one sample will be written per call to
-            # updateHook, regardless of the actual amount of samples that are
-            # waiting to be read by the task
+            # updateHook. Automatic cyclic publication uses this timing.
             def triggered_once_per_update
                 @triggered_once_per_update = true
                 self
             end
 
-            # True if the port will be written for the calls to updateHook()
-            # that are triggered by the activity.
-            #
-            # See #triggered_on_update and #triggered_on
+            # True if the port is published for each successful updateHook().
             def triggered_on_update?
-                if @triggered_once_per_update then true
-                elsif port_triggers.empty?
-                    # One can set triggered_on_update to false explicitely to
-                    # override the default
-                    @triggered_on_update != false
-                else
-                    @triggered_on_update
-                end
+                @triggered_once_per_update || @triggered_on_update != false
             end
 
             # If true, this port will be written at most once per call to
-            # updateHook, regardless of the actual amount of samples that are
-            # waiting to be read by the task
+            # updateHook. Automatic cyclic publication uses this timing.
             #
             # The port period and burst are still used
             def triggered_once_per_update?
                 !!@triggered_once_per_update
             end
 
-            def init_policy?
-                @init_policy
-            end
-
-            # Calls keep_last_written_value(value)
-            def init_policy(*value)
-                return @init_policy if value.empty?
-
-                if value.size > 1
-                    raise ArgumentError,
-                          "init_policy accepts at most one argument, " \
-                          "but got #{value.size}"
-                end
-
-                @init_policy = value.first
-                keep_last_written_value(value.first)
-                self
-            end
         end
     end
 end

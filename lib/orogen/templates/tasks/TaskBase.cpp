@@ -2,6 +2,22 @@
 
 #include "tasks/<%= File.join(task.namespace, task.basename) %>Base.hpp"
 
+<% if task.extended_state_support? %>
+#include <rtt/internal/PortDataAccess.hpp>
+
+namespace {
+// Framework lifecycle observation runs at the state transition boundary, including
+// start, stop and errors. Keep the working image and committed snapshot aligned.
+void publishLifecycleState(
+    RTT::OutputPort<<%= task.project.find_type('/int32_t').cxx_name %>>& port,
+    <%= task.project.find_type('/int32_t').cxx_name %> state)
+{
+    port.data() = state;
+    RTT::internal::PortDataAccess::commit(port);
+}
+}
+<% end %>
+
 using namespace <%= task.full_namespace%>;
 
 <% code_before, code_after =
@@ -66,8 +82,7 @@ void <%= task.basename %>Base::setupComponentInterface()
     compact.join("\n") %>
 
     <% if task.extended_state_support? %>
-    _state.keepLastWrittenValue(true);
-    _state.write(getTaskState());
+    publishLifecycleState(_state, getTaskState());
     <% end %>
 }
 
@@ -87,30 +102,30 @@ void <%= task.basename %>Base::fatal()
 
 void <%= task.basename %>Base::report(States state)
 {
-    _state.write(state);
+    publishLifecycleState(_state, state);
 }
 void <%= task.basename %>Base::state(States state)
 {
-    _state.write(state);
+    publishLifecycleState(_state, state);
 }
 void <%= task.basename %>Base::error(States state)
 {
-    _state.write(state);
+    publishLifecycleState(_state, state);
     TaskContext::error();
 }
 void <%= task.basename %>Base::exception(States state)
 {
-    _state.write(state);
+    publishLifecycleState(_state, state);
     TaskContext::exception();
 }
 void <%= task.basename %>Base::fatal(States state)
 {
-    _state.write(state);
+    publishLifecycleState(_state, state);
     TaskContext::fatal();
 }
 <%= task.basename %>Base::States <%= task.basename %>Base::state() const
 {
-    return static_cast<<%= task.basename %>Base::States>(_state.getLastWrittenValue());
+    return static_cast<<%= task.basename %>Base::States>(_state.snapshot());
 }
 
 #ifdef RTT_HAS_STATE_CHANGE_HOOK
@@ -213,7 +228,7 @@ void <%= task.basename %>Base::setTaskState(TaskState state) {
         default:
             break;
     }
-    _state.write(state);
+    publishLifecycleState(_state, state);
 }
 
 #else
@@ -226,7 +241,7 @@ struct StateExporter
         : task(task), port(port) {}
     ~StateExporter()
     {
-        port.write(task.getTaskState());
+        publishLifecycleState(port, task.getTaskState());
     }
 };
 

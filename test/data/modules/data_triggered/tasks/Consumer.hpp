@@ -51,9 +51,8 @@ namespace data {
          * third case the component is stopped and resetError() needs to be
          * called before starting it again.
          *
-         * The \a updated_ports argument is the set of ports that have triggered
-         * this call. If the trigger is caused by something different (for
-         * instance, a periodic update), then this set is empty.
+         * Input images are refreshed before this hook. Incoming data does not
+         * schedule the activity.
          */
         void updateHook();
         
@@ -83,4 +82,3 @@ namespace data {
 }
 
 #endif
-

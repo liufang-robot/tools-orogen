@@ -23,17 +23,14 @@ Producer::Producer(std::string const& name, TaskCore::TaskState initial_state)
 void Producer::updateHook()
 {
     static int idx = 0;
-    ++idx;
+    if (idx < 10)
+        ++idx;
 
-    if (idx == 11) // finish on a non-triggering write to have a more deterministic test
-        exit(0);
+    _output.data() = idx;
+    _output2.data() = idx;
 
-    if (idx % 2 == 0)
-        _output.write(idx);
-    else _output2.write(idx);
 }
 
 // void Producer::errorHook() {}
 // void Producer::stopHook() {}
 // void Producer::cleanupHook() {}
-

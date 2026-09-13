@@ -106,15 +106,8 @@ module OroGen
                 end
 
                 def register_for_generation
-                    add =
-                        if task.find_event_port(name)
-                            "addEventPort"
-                        else
-                            "addPort"
-                        end
-
                     constructor = []
-                    constructor << "ports()->#{add}(_#{name})"
+                    constructor << "ports()->addPort(_#{name})"
                     if doc
                         constructor << "  .doc(#{Generation.multiline_string_to_cxx(doc)})"
                     end
@@ -145,17 +138,6 @@ module OroGen
                     super
 
                     setup = []
-                    if keep_last_written_value == :initial
-                        setup << "_#{name}.keepLastWrittenValue(false);"
-                        setup << "_#{name}.keepNextWrittenValue(true);"
-                    elsif keep_last_written_value
-                        setup << "_#{name}.keepLastWrittenValue(true);"
-                        setup << "_#{name}.keepNextWrittenValue(false);"
-                    else
-                        setup << "_#{name}.keepLastWrittenValue(false);"
-                        setup << "_#{name}.keepNextWrittenValue(false);"
-                    end
-
                     type.metadata.get("orogen:cxx_port_codegen:constructor").each do |code|
                         setup << format(code, name)
                     end
