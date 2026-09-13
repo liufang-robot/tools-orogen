@@ -138,9 +138,9 @@ describe OroGen::Spec::ConnPolicy do
         end
 
         it "should assign hash values to variables" do
-            policy = conn_policy.from_hash type: :buffer, lock_policy: :locked,
+            policy = conn_policy.from_hash type: :data, lock_policy: :locked,
                                            size: 10
-            assert_equal(:buffer, policy.type)
+            assert_equal(:data, policy.type)
             assert_equal(:locked, policy.lock_policy)
             assert_equal(false, policy.pull)
             assert_equal(10, policy.size)
@@ -153,31 +153,69 @@ describe OroGen::Spec::ConnPolicy do
             assert_equal(0, policy.size)
         end
         it "should raise ArgumentError if the connection type is unknown" do
-            assert_raises(ArgumentError) { conn_policy.from_hash type: :unknown }
+            [:unknown, nil, false, "data"].each do |type|
+                assert_raises(ArgumentError) { conn_policy.from_hash type: type }
+            end
         end
         it "should raise ArgumentError if the lock_policy is unknown" do
-            assert_raises(ArgumentError) do
-                conn_policy.from_hash lock_policy: :unknown
+            [:unknown, nil, false].each do |lock_policy|
+                assert_raises(ArgumentError) do
+                    conn_policy.from_hash lock_policy: lock_policy
+                end
             end
         end
-        it "should raise ArgumentError if size is given for a data connection" do
-            assert_raises(ArgumentError) do
-                conn_policy.from_hash type: :data, size: 10
-            end
-            assert_raises(ArgumentError) do
-                conn_policy.from_hash type: :data, size: 0
+        it "rejects obsolete buffered modes instead of generating FIFO connections" do
+            %i[buffer circular_buffer].each do |type|
+                error = assert_raises(ArgumentError) do
+                    conn_policy.from_hash type: type, size: 10
+                end
+                assert_match(/only :data/, error.message)
             end
         end
-        it "should raise ArgumentError if size is not given for a buffer connection" do
-            assert_raises(ArgumentError) { conn_policy.from_hash type: :buffer }
+        it "rejects unbuffered streaming for a paired deployment connection" do
+            assert_raises(ArgumentError) { conn_policy.from_hash type: :unbuffered }
         end
-        it "should raise ArgumentError if a non-positive size is given for a buffer connection" do
+        it "preserves a transport capacity without changing latest-value semantics" do
+            policy = conn_policy.from_hash size: 10, pull: true
+            assert_equal :data, policy.type
+            assert_equal 10, policy.size
+            assert policy.pull
+            assert_equal 0, conn_policy.from_hash(size: 0).size
+        end
+        it "rejects a negative transport capacity" do
             assert_raises(ArgumentError) do
-                conn_policy.from_hash type: :buffer, size: 0
+                conn_policy.from_hash size: -1
             end
-            assert_raises(ArgumentError) do
-                conn_policy.from_hash type: :buffer, size: -1
+        end
+    end
+
+    describe "#to_code" do
+        it "generates DATA while preserving locking, pull and transport capacity" do
+            policy = OroGen::Spec::ConnPolicy.from_hash(
+                type: :data, lock_policy: :locked, pull: true, size: 10
+            )
+            code = policy.to_code("policy")
+            assert_includes code, "policy.type      = RTT::ConnPolicy::DATA;"
+            assert_includes code, "policy.lock_policy = RTT::ConnPolicy::LOCKED;"
+            assert_includes code, "policy.pull      = true;"
+            assert_includes code, "policy.size      = 10;"
+        end
+
+        it "rejects obsolete modes assigned directly to a policy" do
+            %i[buffer circular_buffer unknown].each do |type|
+                policy = OroGen::Spec::ConnPolicy.new
+                policy.type = type
+                assert_raises(ArgumentError) { policy.to_code("policy") }
             end
+        end
+
+        it "validates directly assigned lock and size settings before generation" do
+            policy = OroGen::Spec::ConnPolicy.new
+            policy.lock_policy = :unknown
+            assert_raises(ArgumentError) { policy.to_code("policy") }
+            policy.lock_policy = :lock_free
+            policy.size = -1
+            assert_raises(ArgumentError) { policy.to_code("policy") }
         end
     end
 end

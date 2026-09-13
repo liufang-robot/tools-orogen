@@ -47,7 +47,7 @@ module OroGen
 
         # Representation of a RTT connection policy
         class ConnPolicy
-            # The connection type. Can be either :data (the default) or :buffer
+            # Paired deployment ports use latest-value :data connections only.
             attr_accessor :type
             # The connection lock type. Can be either :lock_free (the default) or :locked
             attr_accessor :lock_policy
@@ -55,7 +55,8 @@ module OroGen
             # boundaries automatically. If true, then the accessor side has to
             # require the sample to be transferred.
             attr_accessor :pull
-            # If +type+ is :buffer, the size of the buffer
+            # Optional transport queue capacity. Zero selects the transport's
+            # default. This does not enable a FIFO at the component input.
             attr_accessor :size
 
             def initialize
@@ -67,7 +68,7 @@ module OroGen
 
             # Creates a new ConnPolicy object from a hash. For instance,
             #
-            #   ConnPolicy.to_hash :type -> :data, :lock_policy -> :lock_free
+            #   ConnPolicy.from_hash type: :data, lock_policy: :lock_free
             #
             # Would create a connection policy with the given type and lock
             # type, using default values for the rest. See attributes of
@@ -76,41 +77,39 @@ module OroGen
                 hash = hash.to_hash.dup
 
                 policy = ConnPolicy.new
-                type = hash.delete(:type) || :data
-                unless %i[data buffer].include?(type)
-                    raise ArgumentError, "'type' can only be either :data or :buffer"
-                end
-
-                policy.type = type
-
-                lock_policy = hash.delete(:lock_policy) || :lock_free
-                if %i[lock_free locked].include?(lock_policy)
-                    policy.lock_policy = lock_policy
-                else
-                    raise ArgumentError,
-                          "'lock_policy' can only be either :lock_free or :locked"
-                end
-
+                policy.type = hash.delete(:type) { :data }
+                policy.lock_policy = hash.delete(:lock_policy) { :lock_free }
                 policy.pull = !!hash.delete(:pull)
-
-                size = hash.delete(:size)
-                if type == :data && size
-                    raise ArgumentError, "data connections don't have any size"
-                end
-
-                policy.size = Integer(size || 0)
+                policy.size = Integer(hash.delete(:size) || 0)
 
                 if !hash.empty?
                     raise ArgumentError,
                           "unknown policy specification options #{hash.keys.join(', ')}"
-                elsif type == :buffer && policy.size <= 0
-                    raise ArgumentError, "you have to specify a buffer size"
                 end
 
-                policy
+                policy.validate
+            end
+
+            # Validate before generation as attributes may have been modified
+            # since construction. Obsolete modes must never become C++ constants.
+            def validate
+                unless type == :data
+                    raise ArgumentError,
+                          "'type' supports only :data for port connections, got #{type.inspect}"
+                end
+                unless %i[lock_free locked].include?(lock_policy)
+                    raise ArgumentError,
+                          "'lock_policy' can only be either :lock_free or :locked"
+                end
+                unless size.kind_of?(Integer) && size >= 0
+                    raise ArgumentError, "'size' must be a nonnegative transport capacity"
+                end
+
+                self
             end
 
             def to_code(varname)
+                validate
                 str = "RTT::ConnPolicy #{varname};\n"
                 str << "#{varname}.type      = RTT::ConnPolicy::#{type.to_s.upcase};\n"
                 str << "#{varname}.lock_policy = RTT::ConnPolicy::#{lock_policy.to_s.upcase};\n"

@@ -15,6 +15,13 @@ module OroGen
             it "returns true in input?" do
                 assert @port.input?
             end
+
+            it "requires latest-value data connections without a buffered DSL helper" do
+                assert_equal :data, @port.required_connection_type
+                refute_respond_to @port, :needs_buffered_connection
+                assert_same @port, @port.needs_data_connection
+                assert_equal :data, @port.required_connection_type
+            end
         end
     end
 end

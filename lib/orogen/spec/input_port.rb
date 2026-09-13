@@ -40,18 +40,6 @@ module OroGen
                 task.port_driven(name)
             end
 
-            # Requires a bounded transport buffer. Cyclic input acquisition
-            # consumes at most one sample per cycle; freshness is observed as
-            #
-            #   if (_input.status() == RTT::NewData)
-            #   {
-            #       // data is available, do something
-            #   }
-            def needs_buffered_connection
-                @required_connection_type = :buffer
-                self
-            end
-
             # True if connections to this port must use a data policy.
             #
             # This should not be useful in general
@@ -70,10 +58,9 @@ module OroGen
 
             # Declares that the task context requires a non-lossy policy
             #
-            # This is different from #requires_buffered_connection as a data
-            # policy could be used if the period of the connection's source is
-            # much longer than the period of the connection's end (for
-            # instance).
+            # Latest-value connections may coalesce samples. Meeting this
+            # requirement therefore depends on deployment timing, for example
+            # running the consumer more often than the producer publishes.
             def needs_reliable_connection
                 @needs_reliable_connection = true
                 self
